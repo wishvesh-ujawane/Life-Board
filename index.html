@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f4f1ea" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#161b1f" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>My Life Board</title>
+<style>
+  :root {
+    --bg: #f4f1ea; --card: #ffffff; --ink: #24303a; --muted: #6b7780;
+    --line: #e2ddd2; --accent: #2f7d6b; --accent-soft: #e3f1ed; --warn: #b4572a; --warn-soft: #fbeee6; --on-accent: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161b1f; --card: #1f262b; --ink: #e6eaed; --muted: #94a1ab;
+      --line: #313a41; --accent: #5cbfa8; --accent-soft: #1d3a34; --warn: #e89a6c; --warn-soft: #3a2a20; --on-accent: #10201c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 "Segoe UI", system-ui, sans-serif; }
+  main { max-width: 1120px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 22px; margin: 0; }
+  h2 { font-size: 16px; margin: 0 0 4px; }
+  .hint { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
+  .top { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .top span { color: var(--muted); font-size: 13px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  .focus { border-left: 5px solid var(--accent); }
+  label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: 10px 0 4px; }
+  input[type=text], input[type=date], textarea {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
+    background: var(--bg); color: var(--ink); font: inherit;
+  }
+  textarea { resize: vertical; min-height: 56px; }
+  input:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  #focus { font-size: 18px; font-weight: 600; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
+  .row > div { flex: 1 1 220px; }
+  .bar { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; margin-top: 12px; }
+  .bar i { display: block; height: 100%; background: var(--accent); }
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  .grid .card { margin-bottom: 0; }
+  input.area-name { font-weight: 600; font-size: 16px; border: none; background: transparent; padding: 0; }
+  .score { display: flex; align-items: center; gap: 10px; }
+  .score input { flex: 1; accent-color: var(--accent); }
+  .score b { min-width: 44px; text-align: right; }
+  button {
+    font: inherit; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--card); color: var(--ink); cursor: pointer;
+  }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  button.small { padding: 3px 8px; font-size: 12px; }
+  .add { display: flex; gap: 8px; }
+  ul { list-style: none; padding: 0; margin: 12px 0 0; }
+  li { display: flex; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line); }
+  li span { flex: 1; overflow-wrap: anywhere; }
+  li small { color: var(--muted); }
+  .empty { color: var(--muted); font-size: 13px; margin-top: 12px; }
+  .notice { background: var(--warn-soft); color: var(--warn); border-radius: 8px; padding: 8px 12px; margin-top: 12px; display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+  .notice.ok { background: var(--accent-soft); color: var(--accent); }
+  .check { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 14px; }
+  .check input { width: 18px; height: 18px; accent-color: var(--accent); }
+  .history button { margin: 0 6px 6px 0; }
+  footer { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; color: var(--muted); font-size: 13px; }
+  section > h2 { margin-top: 8px; }
+  [hidden] { display: none !important; }
+  select { font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+  #vision { margin-bottom: 16px; }
+  .visions { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-bottom: 12px; }
+  .vision { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+  .vision .pic {
+    aspect-ratio: 16 / 10; width: 100%; border: 0; border-radius: 0; padding: 0; color: var(--muted); font-size: 12px;
+    background: linear-gradient(135deg, var(--accent-soft), var(--line)) center / cover no-repeat;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  }
+  .vision .pic b { font-size: 44px; line-height: 1; }
+  .vision .body { padding: 12px; flex: 1; min-width: 0; }
+  .vision .title { font-weight: 600; font-size: 16px; display: block; }
+  .vision .title, #focus { field-sizing: content; resize: none; min-height: 0; }
+  .vision .left { font-weight: 600; color: var(--accent); font-size: 14px; margin: 8px 0; }
+  .vision .foot { display: flex; gap: 8px; align-items: center; }
+  .daynav { display: flex; gap: 6px; margin-top: 6px; }
+  .daynav button { flex: 1; }
+  .recent { margin-top: 12px; font-size: 14px; }
+  .recent p { margin: 0 0 4px; }
+  .week { display: flex; gap: 6px; flex-wrap: wrap; }
+  .week button { width: 34px; height: 34px; padding: 0; font-size: 12px; font-weight: 600; }
+  .week .done { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .week .miss { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); }
+  .compare { font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .compare .up { color: var(--accent); }
+  .compare .down { color: var(--warn); }
+  .spark { width: 120px; height: 28px; display: block; margin-top: 4px; }
+  .spark polyline { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  details { border-top: 1px solid var(--line); padding: 8px 0; }
+  summary { cursor: pointer; font-weight: 600; }
+  .snap { margin: 8px 0 0; }
+  .snap span { display: block; color: var(--muted); font-size: 13px; }
+  .proj small { display: block; }
+  .proj.is-focus b { color: var(--accent); }
+  #alerts { border-left: 5px solid var(--warn); }
+  #alerts.clear { border-left-color: var(--accent); }
+  #alerts h2 { margin: 0; }
+  #alerts ul { margin-top: 8px; }
+  #alerts ul:empty { display: none; }
+  #alerts a { flex: 1; color: var(--ink); text-decoration: none; padding: 4px 0; overflow-wrap: anywhere; }
+  #alerts a::after { content: ' \203A'; color: var(--muted); }
+  .badge { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 5px; border-radius: 9px; background: var(--warn); color: var(--card); font-size: 12px; line-height: 18px; }
+  html { scroll-behavior: smooth; }
+  #vision, #focusCard, #journal, #status, #projects, #inbox, #backup { scroll-margin-top: 12px; }
+  .tabs { display: none; }
+  @media (max-width: 700px) {
+    main { padding: 16px 12px calc(84px + env(safe-area-inset-bottom)); }
+    input[type=text], input[type=date], textarea { font-size: 16px; }
+    button.small { padding: 8px 12px; font-size: 14px; }
+    select { font-size: 16px; }
+    .vision { flex-direction: row; }
+    .vision .pic { flex: 0 0 104px; width: 104px; aspect-ratio: auto; }
+    .vision .pic b { font-size: 32px; }
+    .vision:not(:focus-within):not(.needs-date) .foot { display: none; }
+    .tabs {
+      display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+      background: var(--card); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom);
+    }
+    .tabs a { flex: 1; text-align: center; padding: 14px 4px; color: var(--ink); text-decoration: none; font-weight: 600; font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <h1>My Life Board</h1>
+    <span id="todayLabel"></span>
+  </div>
+
+  <section class="card" id="alerts">
+    <h2 id="alertsTitle"></h2>
+    <ul id="alertList"></ul>
+  </section>
+
+  <section id="vision">
+    <h2>My vision</h2>
+    <p class="hint">Look at this first, every morning. Tap a picture to add your own photo, or a title to change it and its date.</p>
+    <div class="visions" id="visions"></div>
+    <button class="small" type="button" id="addVision">Add a vision</button>
+    <input type="file" id="visionFile" accept="image/*" hidden>
+  </section>
+
+  <div class="card focus" id="focusCard">
+    <label for="focus">My one focus for these 90 days</label>
+    <textarea id="focus" rows="2" placeholder="The one thing you will finish in these 90 days"></textarea>
+    <div class="row">
+      <div>
+        <label for="why">Why this matters to me</label>
+        <input type="text" id="why" placeholder="One line. Read it when you feel like jumping to something else.">
+      </div>
+      <div style="flex: 0 1 170px">
+        <label for="startDate">Started on</label>
+        <input type="date" id="startDate">
+      </div>
+    </div>
+    <div class="bar"><i id="dayBar"></i></div>
+    <p class="hint" id="dayText" style="margin: 6px 0 0"></p>
+    <div class="notice" id="reviewNotice">
+      <span id="reviewText"></span>
+      <button class="small" id="reviewBtn">I did my weekly check today</button>
+    </div>
+  </div>
+
+  <div class="card" id="journal">
+    <div class="row">
+      <div>
+        <h2>Daily journal</h2>
+        <p class="hint">Morning: fill the first box. Night: fill the other two. Five minutes.</p>
+      </div>
+      <div style="flex: 0 1 230px">
+        <label for="jDate">Day</label>
+        <input type="date" id="jDate">
+        <div class="daynav">
+          <button class="small" type="button" id="jPrev">Earlier</button>
+          <button class="small" type="button" id="jToday">Today</button>
+          <button class="small" type="button" id="jNext">Later</button>
+        </div>
+      </div>
+    </div>
+    <div class="recent" id="recent"></div>
+    <label for="jMust">The one thing that must happen today</label>
+    <input type="text" id="jMust" placeholder="Small and specific, e.g. finish the login screen">
+    <div class="check"><input type="checkbox" id="jDone"><span>Done</span></div>
+    <div class="row">
+      <div>
+        <label for="jDid">What I actually did</label>
+        <textarea id="jDid"></textarea>
+      </div>
+      <div>
+        <label for="jOff">What pulled me off track</label>
+        <textarea id="jOff"></textarea>
+      </div>
+    </div>
+    <div class="history" id="history"></div>
+  </div>
+
+  <section id="status">
+    <h2>Where I stand, and where I want to go</h2>
+    <p class="hint">Update this once a week. Each card shows how its score has moved.</p>
+    <div class="grid" id="areas"></div>
+    <div class="card" style="margin-top: 16px">
+      <h2>Past weekly checks</h2>
+      <div id="reviews"></div>
+    </div>
+  </section>
+
+  <div class="card" id="projects">
+    <h2>What I have built</h2>
+    <p class="hint" id="projectSummary"></p>
+    <div class="notice" id="projectNotice" hidden></div>
+    <ul id="projectList"></ul>
+    <form class="add" id="projectForm" style="margin-top: 12px">
+      <input type="text" id="projectInput" placeholder="Another project" aria-label="New project">
+      <button>Add</button>
+    </form>
+  </div>
+
+  <div class="grid">
+    <div class="card" id="inbox">
+      <h2>Capture inbox</h2>
+      <p class="hint">Every new idea goes here first. Do not act on it until the weekly check.</p>
+      <form class="add" id="inboxForm">
+        <input type="text" id="inboxInput" placeholder="New idea, task or worry" aria-label="New inbox item">
+        <button class="primary">Add</button>
+      </form>
+      <ul id="inboxList"></ul>
+    </div>
+    <div class="card">
+      <h2>Parked for later</h2>
+      <p class="hint">Ideas moved out of the inbox. Not abandoned, just not now.</p>
+      <form class="add" id="parkedForm">
+        <input type="text" id="parkedInput" placeholder="Something to park" aria-label="New parked item">
+        <button>Add</button>
+      </form>
+      <ul id="parkedList"></ul>
+    </div>
+  </div>
+
+  <footer id="backup" style="margin-top: 16px">
+    <button id="exportBtn">Export backup</button>
+    <button id="importBtn">Import backup</button>
+    <input type="file" id="importFile" accept="application/json,.json" hidden>
+    <span id="saveStatus"></span>
+  </footer>
+</main>
+
+<nav class="tabs" aria-label="Sections">
+  <a href="#top">Vision<span class="badge" id="navCount" hidden></span></a>
+  <a href="#journal">Journal</a>
+  <a href="#status">Status</a>
+  <a href="#inbox">Inbox</a>
+</nav>
+
+<script>
+(function () {
+  var KEY = 'lifeboard.v1';
+  var $ = function (id) { return document.getElementById(id); };
+  var pad = function (n) { return String(n).padStart(2, '0'); };
+  var iso = function (d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
+  var fromIso = function (s) { var p = s.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); };
+  var daysBetween = function (a, b) { return Math.round((fromIso(b) - fromIso(a)) / 86400000); };
+  var uid = function () { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); };
+  var isDate = function (s) { return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s); };
+  var today = iso(new Date());
+  var addDays = function (s, n) { var d = fromIso(s); d.setDate(d.getDate() + n); return iso(d); };
+  var shortDate = function (s) { return fromIso(s).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }); };
+  var longDate = function (s) { return fromIso(s).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }); };
+  var STAGES = [['focus', 'Focus now'], ['parked', 'Parked'], ['live', 'Live'], ['idea', 'Idea']];
+
+  // This file is public. Keep the starting board blank: personal goals and project names belong in a backup file, not here.
+  function defaults() {
+    var area = function (name, now, target, next) {
+      return { id: uid(), name: name, score: 5, now: '', target: '', next: '', hints: [now, target, next] };
+    };
+    return {
+      focus: '',
+      why: '',
+      startDate: today,
+      lastReview: null,
+      areas: [
+        area('Health', 'e.g. sleeping 5 hours, no exercise', 'e.g. sleeping by 11pm, walking daily', 'e.g. 20-minute walk after dinner'),
+        area('Job', 'How is work going right now?', 'What should be true in 90 days?', 'One small step this week'),
+        area('Side income', 'What is built? What is missing?', 'e.g. launched, 10 real users, first payment', 'The very next thing to build or ship'),
+        area('Finances', 'Savings, expenses, debts, in numbers', 'One number you want to reach', 'e.g. write down all monthly expenses'),
+        area('Family', 'How much real time are you giving?', 'What do you want it to look like?', 'One thing to do with them this week'),
+        area('Learning', 'What are you learning now?', 'Only what your focus or your job needs', 'One topic, one resource')
+      ],
+      inbox: [],
+      parked: [],
+      journal: {},
+      visions: [{ id: uid(), icon: '\u2728', title: '', date: '', img: '' }],
+      projects: [],
+      scoreLog: {},
+      reviews: [],
+      lastBackup: null
+    };
+  }
+
+  function normalise(data) {
+    var base = defaults();
+    if (!data || typeof data !== 'object') return base;
+    var s = Object.assign(base, data);
+    if (!isDate(s.startDate)) s.startDate = today;
+    if (!isDate(s.lastReview)) s.lastReview = null;
+    if (!Array.isArray(s.areas)) s.areas = defaults().areas;
+    if (!Array.isArray(s.inbox)) s.inbox = [];
+    if (!Array.isArray(s.parked)) s.parked = [];
+    if (!s.journal || typeof s.journal !== 'object') s.journal = {};
+    if (!Array.isArray(s.visions)) s.visions = defaults().visions;
+    if (!Array.isArray(s.projects)) s.projects = defaults().projects;
+    if (!Array.isArray(s.reviews)) s.reviews = [];
+    if (!s.scoreLog || typeof s.scoreLog !== 'object') s.scoreLog = {};
+    if (!isDate(s.lastBackup)) s.lastBackup = null;
+    return s;
+  }
+
+  function load() {
+    try { return normalise(JSON.parse(localStorage.getItem(KEY))); }
+    catch (e) { return defaults(); }
+  }
+
+  var state = load();
+  var journalDate = today;
+
+  function save() {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(state));
+      $('saveStatus').textContent = 'Saved on this device at ' + new Date().toLocaleTimeString();
+    } catch (e) {
+      $('saveStatus').textContent = 'Could not save. Use Export backup to keep your data.';
+    }
+    renderAlerts();
+  }
+
+  function buildAlerts() {
+    var list = [];
+    var add = function (href, text) { list.push({ href: href, text: text }); };
+    var text = function (s) { return (s || '').trim(); };
+
+    var t = state.journal[today], y = state.journal[addDays(today, -1)];
+    if (!text(state.focus)) add('#focusCard', 'Write your one focus for these 90 days.');
+    if (!t || !text(t.must)) {
+      add('#journal', 'Set the one thing that must happen today.'
+        + (y && !y.done && text(y.must) ? ' Yesterday\u2019s was not done: \u201C' + text(y.must) + '\u201D.' : ''));
+    } else if (new Date().getHours() >= 20 && !text(t.did)) {
+      add('#journal', 'Close the day: write what you did and what pulled you off track' + (t.done ? '.' : ', and tick your one thing if it is done.'));
+    }
+
+    var since = state.lastReview ? daysBetween(state.lastReview, today) : null;
+    if (since === null || since >= 7) {
+      var waiting = state.inbox.length;
+      add('#focusCard', (since === null ? 'Do your first weekly check: fill in the status cards' : 'Weekly check is due, last done ' + since + ' days ago')
+        + (waiting ? ', and sort the ' + waiting + (waiting === 1 ? ' idea' : ' ideas') + ' waiting in the inbox.' : '.'));
+    }
+
+    if (daysBetween(state.startDate, today) + 1 > 90) add('#focusCard', 'The 90 days are complete. Review them and choose your next focus.');
+
+    state.visions.forEach(function (v) {
+      var name = text(v.title) || 'your new vision';
+      if (!isDate(v.date)) return add('#vision', 'Pick a target date for: ' + name + '.');
+      var left = daysBetween(today, v.date);
+      if (left < 0) add('#vision', 'The target date has passed for: ' + name + '. Set a new date, or remove it if it is done.');
+      else if (left <= 7) add('#vision', (left === 0 ? 'Today is the target date for: ' : left === 1 ? '1 day left for: ' : left + ' days left for: ') + name + '.');
+    });
+
+    var inFocus = state.projects.filter(function (p) { return p.stage === 'focus'; }).length;
+    if (state.projects.length && inFocus !== 1) {
+      add('#projects', inFocus ? inFocus + ' projects are marked "Focus now". Choose one.' : 'No project is marked "Focus now". Choose one.');
+    }
+
+    var backup = state.lastBackup ? daysBetween(state.lastBackup, today) : null;
+    if (backup === null ? Object.keys(state.journal).length >= 3 : backup >= 7) {
+      add('#backup', backup === null ? 'You have not exported a backup yet. Export one so your entries are safe.'
+        : 'Your last backup was ' + backup + ' days ago. Export a new one.');
+    }
+    return list;
+  }
+
+  var shownAlerts = null;
+
+  function renderAlerts() {
+    var list = buildAlerts();
+    var key = JSON.stringify(list);
+    if (key === shownAlerts) return;
+    shownAlerts = key;
+    $('alerts').className = 'card' + (list.length ? '' : ' clear');
+    $('alertsTitle').textContent = list.length ? 'Needs your attention (' + list.length + ')' : 'Nothing needs your attention right now';
+    var box = $('alertList');
+    box.textContent = '';
+    list.forEach(function (a) { box.appendChild(el('li', null, [el('a', { href: a.href, textContent: a.text })])); });
+    $('navCount').hidden = !list.length;
+    $('navCount').textContent = list.length;
+    $('navCount').setAttribute('aria-label', list.length + ' need attention');
+    document.title = (list.length ? '(' + list.length + ') ' : '') + 'My Life Board';
+  }
+
+  function el(tag, props, children) {
+    var node = document.createElement(tag);
+    Object.assign(node, props || {});
+    (children || []).forEach(function (c) { node.appendChild(c); });
+    return node;
+  }
+
+  function renderHeader() {
+    $('todayLabel').textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    $('focus').value = state.focus;
+    $('why').value = state.why;
+    $('startDate').value = state.startDate;
+
+    var day = daysBetween(state.startDate, today) + 1;
+    $('dayBar').style.width = Math.max(0, Math.min(100, (day / 90) * 100)) + '%';
+    $('dayText').textContent = day < 1 ? 'Starts in ' + (1 - day) + ' day(s).'
+      : day <= 90 ? 'Day ' + day + ' of 90.'
+      : 'The 90 days are complete. Review what happened, then choose the next focus and set a new start date.';
+
+    var since = state.lastReview ? daysBetween(state.lastReview, today) : null;
+    var due = since === null || since >= 7;
+    $('reviewNotice').className = 'notice' + (due ? '' : ' ok');
+    $('reviewText').textContent = since === null ? 'Weekly check not done yet. Take 20 minutes: update the cards below and clear the inbox.'
+      : due ? 'Weekly check is due. Last done ' + since + ' days ago.'
+      : since === 0 ? 'Weekly check done today.'
+      : 'Weekly check done ' + since + ' day(s) ago. Next one in ' + (7 - since) + ' day(s).';
+    $('reviewBtn').hidden = since === 0;
+  }
+
+  function renderJournal() {
+    var e = state.journal[journalDate] || {};
+    $('jDate').value = journalDate;
+    $('jMust').value = e.must || '';
+    $('jDone').checked = !!e.done;
+    $('jDid').value = e.did || '';
+    $('jOff').value = e.off || '';
+    renderRecent();
+    renderHistory();
+  }
+
+  function renderRecent() {
+    var box = $('recent');
+    box.textContent = '';
+    if (journalDate !== today) {
+      var gap = daysBetween(journalDate, today);
+      var when = gap === 1 ? 'yesterday' : gap > 1 ? gap + ' days ago' : gap === -1 ? 'tomorrow' : 'in ' + (-gap) + ' days';
+      box.appendChild(el('p', { textContent: 'Viewing ' + longDate(journalDate) + ' (' + when + ').' }));
+      return;
+    }
+    var y = state.journal[addDays(today, -1)];
+    box.appendChild(el('p', { textContent: y
+      ? 'Yesterday: ' + (y.must || 'no one thing was set') + (y.done ? ' (done)' : ' (not done)') + (y.off ? '. Pulled off track by: ' + y.off : '')
+      : 'Yesterday: nothing written.' }));
+    var done = 0;
+    var week = el('div', { className: 'week' });
+    for (var i = 6; i >= 0; i--) {
+      (function (d) {
+        var entry = state.journal[d];
+        if (entry && entry.done) done++;
+        var b = el('button', {
+          type: 'button', className: entry ? (entry.done ? 'done' : 'miss') : '',
+          textContent: fromIso(d).toLocaleDateString(undefined, { weekday: 'narrow' }),
+          onclick: function () { journalDate = d; renderJournal(); }
+        });
+        b.setAttribute('aria-label', longDate(d) + ': ' + (entry ? (entry.done ? 'done' : 'not done') : 'nothing written'));
+        week.appendChild(b);
+      })(addDays(today, -i));
+    }
+    box.appendChild(el('label', { textContent: 'Last 7 days: ' + done + ' of 7 done' }));
+    box.appendChild(week);
+  }
+
+  function renderHistory() {
+    var box = $('history');
+    box.textContent = '';
+    var dates = Object.keys(state.journal).filter(isDate).sort().reverse().slice(0, 30);
+    if (!dates.length) return;
+    var count = Object.keys(state.journal).length;
+    box.appendChild(el('label', { textContent: 'Past entries (' + count + (count === 1 ? ' day' : ' days') + ' journaled)' }));
+    dates.forEach(function (d) {
+      var mark = state.journal[d].done ? ' \u2713' : '';
+      box.appendChild(el('button', {
+        className: 'small', type: 'button',
+        textContent: fromIso(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) + mark,
+        onclick: function () { journalDate = d; renderJournal(); }
+      }));
+    });
+  }
+
+  function updateJournal() {
+    var e = {
+      must: $('jMust').value, done: $('jDone').checked,
+      did: $('jDid').value, off: $('jOff').value
+    };
+    if (e.must.trim() || e.did.trim() || e.off.trim() || e.done) state.journal[journalDate] = e;
+    else delete state.journal[journalDate];
+    save();
+    renderRecent();
+    renderHistory();
+  }
+
+  function recordScores() {
+    var day = {};
+    state.areas.forEach(function (a) { day[a.id] = a.score; });
+    state.scoreLog[today] = day;
+  }
+
+  function scoreHistory(a) {
+    return Object.keys(state.scoreLog).filter(isDate).sort()
+      .filter(function (d) { return state.scoreLog[d] && typeof state.scoreLog[d][a.id] === 'number'; })
+      .map(function (d) { return { date: d, score: state.scoreLog[d][a.id] }; });
+  }
+
+  function sparkline(values) {
+    var ns = 'http://www.w3.org/2000/svg', w = 120, h = 28;
+    var svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+    svg.setAttribute('class', 'spark');
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', 'Score over the last ' + values.length + ' recorded days: ' + values.join(', '));
+    var line = document.createElementNS(ns, 'polyline');
+    line.setAttribute('points', values.map(function (v, i) {
+      return (i * w / (values.length - 1)).toFixed(1) + ',' + (h - 3 - (v - 1) * (h - 6) / 9).toFixed(1);
+    }).join(' '));
+    svg.appendChild(line);
+    return svg;
+  }
+
+  function fillCompare(node, a) {
+    node.textContent = '';
+    var hist = scoreHistory(a);
+    var earlier = hist.filter(function (h) { return h.date < today; });
+    if (!earlier.length) {
+      node.textContent = 'No earlier day to compare with yet.';
+      return;
+    }
+    var prev = earlier[earlier.length - 1], first = earlier[0], diff = a.score - prev.score;
+    var text = 'Was ' + prev.score + ' on ' + shortDate(prev.date)
+      + (diff > 0 ? ', up ' + diff + ' \u25B2' : diff < 0 ? ', down ' + (-diff) + ' \u25BC' : ', no change');
+    if (first.date !== prev.date) text += ' \u00B7 started at ' + first.score + ' on ' + shortDate(first.date);
+    node.appendChild(el('span', { textContent: text, className: diff > 0 ? 'up' : diff < 0 ? 'down' : '' }));
+    if (hist.length > 1) node.appendChild(sparkline(hist.slice(-30).map(function (h) { return h.score; })));
+  }
+
+  function renderAreas() {
+    var box = $('areas');
+    box.textContent = '';
+    state.areas.forEach(function (a) {
+      var hints = a.hints || [];
+      var scoreText = el('b', { textContent: a.score + ' / 10' });
+      var field = function (labelText, key, hint) {
+        var input = el('textarea', { value: a[key] || '', placeholder: hint || '' });
+        input.setAttribute('aria-label', a.name + ': ' + labelText);
+        input.oninput = function () { a[key] = input.value; save(); };
+        return [el('label', { textContent: labelText }), input];
+      };
+      var name = el('input', { type: 'text', className: 'area-name', value: a.name });
+      name.setAttribute('aria-label', 'Area name');
+      name.oninput = function () { a.name = name.value; save(); };
+      var range = el('input', { type: 'range', min: 1, max: 10, value: a.score });
+      range.setAttribute('aria-label', a.name + ': how it is going, 1 to 10');
+      var compare = el('div', { className: 'compare' });
+      range.oninput = function () {
+        a.score = Number(range.value);
+        scoreText.textContent = a.score + ' / 10';
+        recordScores();
+        fillCompare(compare, a);
+        save();
+      };
+      fillCompare(compare, a);
+
+      box.appendChild(el('div', { className: 'card' }, [
+        name,
+        el('label', { textContent: 'How it is going today' }),
+        el('div', { className: 'score' }, [range, scoreText]),
+        compare
+      ].concat(
+        field('Where I am now', 'now', hints[0]),
+        field('Where I want to be in 90 days', 'target', hints[1]),
+        field('Next small action', 'next', hints[2])
+      )));
+    });
+  }
+
+  function renderList(listId, items, actions, emptyText) {
+    var list = $(listId);
+    list.textContent = '';
+    if (!items.length) {
+      list.appendChild(el('li', { className: 'empty', textContent: emptyText }));
+      return;
+    }
+    items.forEach(function (item) {
+      var parts = [el('span', { textContent: item.text })];
+      if (item.date) parts.push(el('small', { textContent: fromIso(item.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) }));
+      actions.forEach(function (a) {
+        parts.push(el('button', { className: 'small', type: 'button', textContent: a.label, onclick: function () { a.run(item); } }));
+      });
+      list.appendChild(el('li', null, parts));
+    });
+  }
+
+  function renderLists() {
+    renderList('inboxList', state.inbox, [
+      { label: 'Park', run: function (item) { state.parked.push({ id: item.id, text: item.text }); removeFrom('inbox', item); } },
+      { label: 'Remove', run: function (item) { removeFrom('inbox', item); } }
+    ], 'Inbox is clear.');
+    renderList('parkedList', state.parked, [
+      { label: 'Remove', run: function (item) { removeFrom('parked', item); } }
+    ], 'Nothing parked.');
+  }
+
+  function removeFrom(key, item) {
+    state[key] = state[key].filter(function (x) { return x !== item; });
+    save();
+    renderLists();
+  }
+
+  function addTo(key, inputId, withDate) {
+    var input = $(inputId);
+    var text = input.value.trim();
+    if (!text) return;
+    var item = { id: uid(), text: text };
+    if (withDate) item.date = today;
+    state[key].push(item);
+    input.value = '';
+    save();
+    renderLists();
+  }
+
+  var pendingVision = null;
+
+  function countdown(date) {
+    if (!isDate(date)) return 'Pick a target date';
+    var n = daysBetween(today, date);
+    return (n > 1 ? n + ' days left' : n === 1 ? '1 day left' : n === 0 ? 'Today is the day' : 'Target date has passed')
+      + ' \u00B7 ' + fromIso(date).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  function renderVisions() {
+    var box = $('visions');
+    box.textContent = '';
+    state.visions.forEach(function (v) {
+      var hasImg = typeof v.img === 'string' && v.img.indexOf('data:image/') === 0;
+      var pic = el('button', { type: 'button', className: 'pic' },
+        hasImg ? [] : [el('b', { textContent: v.icon || '\u2728' }), el('span', { textContent: 'Add photo' })]);
+      pic.setAttribute('aria-label', (hasImg ? 'Change' : 'Add') + ' picture for: ' + (v.title || 'new vision'));
+      if (hasImg) pic.style.backgroundImage = 'url("' + v.img + '")';
+      pic.onclick = function () { pendingVision = v; $('visionFile').click(); };
+
+      var left = el('div', { className: 'left', textContent: countdown(v.date) });
+      var title = el('textarea', { className: 'title', rows: 2, value: v.title || '', placeholder: 'Write it as if it is already true' });
+      title.setAttribute('aria-label', 'Vision');
+      title.oninput = function () { v.title = title.value; save(); };
+      var date = el('input', { type: 'date', value: isDate(v.date) ? v.date : '' });
+      date.setAttribute('aria-label', 'Target date');
+      date.onchange = function () {
+        v.date = isDate(date.value) ? date.value : '';
+        left.textContent = countdown(v.date);
+        card.classList.toggle('needs-date', !v.date);
+        save();
+      };
+      var remove = el('button', {
+        type: 'button', className: 'small', textContent: 'Remove',
+        onclick: function () {
+          if (!confirm('Remove this vision?')) return;
+          state.visions = state.visions.filter(function (x) { return x !== v; });
+          save();
+          renderVisions();
+        }
+      });
+      var card = el('div', { className: 'vision' + (isDate(v.date) ? '' : ' needs-date') }, [
+        pic, el('div', { className: 'body' }, [title, left, el('div', { className: 'foot' }, [date, remove])])
+      ]);
+      box.appendChild(card);
+    });
+  }
+
+  // Photos are shrunk before saving so a few of them fit in the browser's storage.
+  function setVisionImage(v, file) {
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function () {
+      var scale = Math.min(1, 640 / Math.max(img.width, img.height));
+      var canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      v.img = canvas.toDataURL('image/jpeg', 0.72);
+      save();
+      renderVisions();
+    };
+    img.onerror = function () {
+      URL.revokeObjectURL(url);
+      $('saveStatus').textContent = 'That picture could not be read. Try another one.';
+    };
+    img.src = url;
+  }
+
+  function renderReviews() {
+    var box = $('reviews');
+    box.textContent = '';
+    var list = state.reviews.filter(function (r) { return r && isDate(r.date); })
+      .sort(function (a, b) { return a.date < b.date ? 1 : -1; }).slice(0, 12);
+    if (!list.length) {
+      box.appendChild(el('p', { className: 'hint', textContent: 'Each time you press "I did my weekly check today", a copy of the cards above is kept here, so you can compare later.' }));
+      return;
+    }
+    list.forEach(function (r) {
+      var block = el('details', null, [el('summary', { textContent: 'Weekly check, ' + longDate(r.date) })]);
+      (r.areas || []).forEach(function (a) {
+        var current = state.areas.filter(function (x) { return x.id === a.id; })[0];
+        var parts = [el('b', { textContent: a.name + ': ' + a.score + ' / 10 then' + (current ? ', ' + current.score + ' / 10 now' : '') })];
+        [['Was at', a.now], ['Wanted', a.target], ['Next action was', a.next]].forEach(function (pair) {
+          if (pair[1]) parts.push(el('span', { textContent: pair[0] + ': ' + pair[1] }));
+        });
+        block.appendChild(el('p', { className: 'snap' }, parts));
+      });
+      box.appendChild(block);
+    });
+  }
+
+  function renderProjects() {
+    var list = $('projectList');
+    list.textContent = '';
+    var counts = {};
+    state.projects.forEach(function (p) {
+      counts[p.stage] = (counts[p.stage] || 0) + 1;
+      var select = el('select');
+      select.setAttribute('aria-label', 'Stage of ' + p.name);
+      STAGES.concat([['remove', 'Remove\u2026']]).forEach(function (s) {
+        select.appendChild(el('option', { value: s[0], textContent: s[1] }));
+      });
+      select.value = p.stage;
+      select.onchange = function () {
+        if (select.value !== 'remove') p.stage = select.value;
+        else if (confirm('Remove "' + p.name + '" from this list?')) state.projects = state.projects.filter(function (x) { return x !== p; });
+        save();
+        renderProjects();
+      };
+      var text = el('span', null, [el('b', { textContent: p.name })]);
+      if (p.note) text.appendChild(el('small', { textContent: p.note }));
+      list.appendChild(el('li', { className: 'proj' + (p.stage === 'focus' ? ' is-focus' : '') }, [text, select]));
+    });
+    var inFocus = counts.focus || 0, total = state.projects.length;
+    $('projectSummary').textContent = !total ? 'List everything you have built or are building, then mark one as your focus.'
+      : total + (total === 1 ? ' project: ' : ' projects: ') + inFocus + ' in focus, ' + (counts.parked || 0)
+        + ' parked, ' + (counts.live || 0) + ' live, ' + (counts.idea || 0) + ' at idea stage.';
+    $('projectNotice').hidden = inFocus === 1 || !total;
+    $('projectNotice').textContent = inFocus > 1
+      ? inFocus + ' projects are marked "Focus now". Choose one; the rest can wait 90 days.'
+      : 'No project is marked "Focus now". Choose one.';
+  }
+
+  function renderAll() {
+    renderVisions(); renderHeader(); renderJournal(); renderAreas(); renderReviews(); renderProjects(); renderLists();
+  }
+
+  $('focus').oninput = function () { state.focus = this.value; save(); };
+  $('why').oninput = function () { state.why = this.value; save(); };
+  $('startDate').onchange = function () {
+    if (isDate(this.value)) { state.startDate = this.value; save(); }
+    renderHeader();
+  };
+  $('reviewBtn').onclick = function () {
+    state.lastReview = today;
+    state.reviews = state.reviews.filter(function (r) { return r && r.date !== today; });
+    state.reviews.push({
+      date: today,
+      areas: state.areas.map(function (a) { return { id: a.id, name: a.name, score: a.score, now: a.now, target: a.target, next: a.next }; })
+    });
+    save();
+    renderHeader();
+    renderReviews();
+  };
+
+  $('addVision').onclick = function () {
+    state.visions.push({ id: uid(), icon: '\u2728', title: '', date: '', img: '' });
+    save();
+    renderVisions();
+  };
+  $('visionFile').onchange = function () {
+    var file = this.files[0];
+    this.value = '';
+    if (file && pendingVision) setVisionImage(pendingVision, file);
+  };
+
+  $('projectForm').onsubmit = function (e) {
+    e.preventDefault();
+    var name = $('projectInput').value.trim();
+    if (!name) return;
+    state.projects.push({ id: uid(), name: name, note: '', stage: 'idea' });
+    $('projectInput').value = '';
+    save();
+    renderProjects();
+  };
+
+  $('jDate').onchange = function () { journalDate = isDate(this.value) ? this.value : today; renderJournal(); };
+  $('jPrev').onclick = function () { journalDate = addDays(journalDate, -1); renderJournal(); };
+  $('jNext').onclick = function () { journalDate = addDays(journalDate, 1); renderJournal(); };
+  $('jToday').onclick = function () { journalDate = today; renderJournal(); };
+  ['jMust', 'jDid', 'jOff'].forEach(function (id) { $(id).oninput = updateJournal; });
+  $('jDone').onchange = updateJournal;
+
+  $('inboxForm').onsubmit = function (e) { e.preventDefault(); addTo('inbox', 'inboxInput', true); };
+  $('parkedForm').onsubmit = function (e) { e.preventDefault(); addTo('parked', 'parkedInput', false); };
+
+  $('exportBtn').onclick = function () {
+    state.lastBackup = today;
+    save();
+    var url = URL.createObjectURL(new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' }));
+    var a = el('a', { href: url, download: 'life-board-backup-' + today + '.json' });
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+  };
+  $('importBtn').onclick = function () { $('importFile').click(); };
+  $('importFile').onchange = function () {
+    var file = this.files[0];
+    this.value = '';
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var data;
+      try { data = JSON.parse(reader.result); } catch (e) { data = null; }
+      if (!data || typeof data !== 'object' || !Array.isArray(data.areas)) {
+        $('saveStatus').textContent = 'That file is not a Life Board backup. Nothing was changed.';
+        return;
+      }
+      if (!confirm('Replace everything on this board with the backup?')) return;
+      state = normalise(data);
+      journalDate = today;
+      recordScores();
+      save();
+      renderAll();
+    };
+    reader.readAsText(file);
+  };
+
+  recordScores();
+  save();
+  renderAll();
+
+  // The installed app can stay open for days, so refresh what is due, and start a new day when the date changes.
+  function refresh() {
+    if (document.hidden) return;
+    if (iso(new Date()) !== today) location.reload();
+    else renderAlerts();
+  }
+  document.addEventListener('visibilitychange', refresh);
+  setInterval(refresh, 300000);
+
+  if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+    // Ask the browser not to clear this app's saved entries when the phone runs low on space.
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () {});
+  }
+})();
+</script>
+</body>
+</html>
