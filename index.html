@@ -62,6 +62,8 @@
   .empty { color: var(--muted); font-size: 13px; margin-top: 12px; }
   .notice { background: var(--warn-soft); color: var(--warn); border-radius: 8px; padding: 8px 12px; margin-top: 12px; display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
   .notice.ok { background: var(--accent-soft); color: var(--accent); }
+  .aiweek { display: flex; gap: 8px 12px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+  .aiweek .hint { margin: 0; flex: 1 1 220px; }
   .check { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 14px; }
   .check input { width: 18px; height: 18px; accent-color: var(--accent); }
   .history button { margin: 0 6px 6px 0; }
@@ -168,6 +170,10 @@
     <div class="notice" id="reviewNotice">
       <span id="reviewText"></span>
       <button class="small" id="reviewBtn">I did my weekly check today</button>
+    </div>
+    <div class="aiweek">
+      <button class="small" type="button" id="copyWeek">Copy my week for AI</button>
+      <span class="hint" id="copyWeekNote" role="status">Paste it into any chat assistant to get a review of your week. It includes your journal, status cards and project list.</span>
     </div>
   </div>
 
@@ -778,6 +784,90 @@
     save();
     renderHeader();
     renderReviews();
+  };
+
+  function buildWeekText() {
+    var flat = function (s) { return (s || '').replace(/\s+/g, ' ').trim(); };
+    var day = daysBetween(state.startDate, today) + 1;
+    var lines = [
+      'Please review my week. Use only the information below, be direct and specific, and keep it under 300 words.',
+      '1. What pattern do you see in what pulled me off track?',
+      '2. What did I actually finish toward my one focus?',
+      '3. What one change should I make next week?',
+      '4. Suggest one small, specific "one thing" for each of the next three days.',
+      '',
+      'TODAY: ' + longDate(today),
+      'MY ONE FOCUS: ' + (flat(state.focus) || 'not set') + (day >= 1 && day <= 90 ? ' (day ' + day + ' of 90)' : day > 90 ? ' (the 90 days are over)' : '')
+    ];
+    if (flat(state.why)) lines.push('WHY IT MATTERS TO ME: ' + flat(state.why));
+
+    var visions = state.visions.filter(function (v) { return flat(v.title); });
+    if (visions.length) {
+      lines.push('', 'MY VISION:');
+      visions.forEach(function (v) { lines.push('- ' + flat(v.title) + (isDate(v.date) ? ' (' + countdown(v.date) + ')' : '')); });
+    }
+
+    var done = 0, empty = 0;
+    lines.push('', 'MY LAST 7 DAYS:');
+    for (var i = 6; i >= 0; i--) {
+      var d = addDays(today, -i), e = state.journal[d];
+      if (!e) { empty++; lines.push('- ' + longDate(d) + ': nothing written'); continue; }
+      if (e.done) done++;
+      lines.push('- ' + longDate(d) + ': One thing: ' + (flat(e.must) || 'not set') + ' [' + (e.done ? 'done' : 'not done') + '].'
+        + (flat(e.did) ? ' What I did: ' + flat(e.did) + '.' : '')
+        + (flat(e.off) ? ' Pulled off track by: ' + flat(e.off) + '.' : ''));
+    }
+    lines.push('Summary: one thing done on ' + done + ' of 7 days; nothing written on ' + empty + '.');
+
+    lines.push('', 'WHERE I STAND (my own score out of 10):');
+    state.areas.forEach(function (a) {
+      var earlier = scoreHistory(a).filter(function (h) { return h.date < today; });
+      var weekAgo = earlier.filter(function (h) { return h.date <= addDays(today, -7); });
+      var ref = weekAgo.length ? weekAgo[weekAgo.length - 1] : earlier[0];
+      lines.push('- ' + flat(a.name) + ': ' + a.score + '/10' + (ref ? ' (was ' + ref.score + ' on ' + shortDate(ref.date) + ')' : '') + '.'
+        + (flat(a.now) ? ' Now: ' + flat(a.now) + '.' : '')
+        + (flat(a.target) ? ' In 90 days I want: ' + flat(a.target) + '.' : '')
+        + (flat(a.next) ? ' Next action: ' + flat(a.next) + '.' : ''));
+    });
+
+    if (state.projects.length) {
+      lines.push('', 'MY PROJECTS:');
+      STAGES.forEach(function (s) {
+        var names = state.projects.filter(function (p) { return p.stage === s[0]; }).map(function (p) { return flat(p.name); });
+        if (names.length) lines.push('- ' + s[1] + ': ' + names.join(', '));
+      });
+    }
+    [['IDEAS WAITING IN MY INBOX', state.inbox], ['IDEAS I HAVE PARKED', state.parked]].forEach(function (group) {
+      if (!group[1].length) return;
+      lines.push('', group[0] + ' (' + group[1].length + '):');
+      group[1].forEach(function (item) { lines.push('- ' + flat(item.text)); });
+    });
+    return lines.join('\n');
+  }
+
+  function copyText(text) {
+    var legacy = function () {
+      var box = el('textarea', { value: text });
+      box.setAttribute('readonly', '');
+      box.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+      document.body.appendChild(box);
+      box.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      box.remove();
+      return ok ? Promise.resolve() : Promise.reject(new Error('copy failed'));
+    };
+    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text).catch(legacy);
+    return legacy();
+  }
+
+  $('copyWeek').onclick = function () {
+    var text = buildWeekText();
+    copyText(text).then(function () {
+      $('copyWeekNote').textContent = 'Copied, about ' + text.split(/\s+/).length + ' words. Now paste it into your chat assistant.';
+    }, function () {
+      $('copyWeekNote').textContent = 'Could not copy on this device. Use Export backup and share that file instead.';
+    });
   };
 
   $('addVision').onclick = function () {
